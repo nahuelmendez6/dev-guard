@@ -5,7 +5,7 @@ from langchain_core.language_models.chat_models import BaseChatModel
 # Cargamos las variables de entorno
 load_dotenv()
 
-def get_llm(temperature float | None = None) -> BaseChatModel:
+def get_llm(temperature: float | None = None) -> BaseChatModel:
     """
     Función fábrica que devuelve una instacia de un modelo de chat compatible
     con LangChain/LangGraph según las variables configuradas en .env
@@ -59,13 +59,13 @@ def get_llm(temperature float | None = None) -> BaseChatModel:
             "Usa 'google', 'openai' o 'groq' como valor de la variable de entorno LLM_PROVIDER."
         )
 
-    if __name__ == "__main__":
-        # Bloque de prueba rapida para verificar la configuracion sin hacer llamadas a la API aun
-        try:
-            llm = get_llm()
-            print("✅ Configuración agnóstica verificada con éxito.")
-            print(f"   • Clase instanciada : {llm.__class__.__name__}")
-            print(f"   • Proveedor activo  : {os.getenv('LLM_PROVIDER')}")
-            print(f"   • Modelo configurado: {os.getenv('LLM_MODEL')}")
-        except Exception as e:
-            print(f"❌ Error de configuración: {e}")
+if __name__ == "__main__":
+    # Bloque de prueba rapida para verificar la configuracion sin hacer llamadas a la API aun
+    try:
+        llm = get_llm()
+        print("✅ Configuración agnóstica verificada con éxito.")
+        print(f"   • Clase instanciada : {llm.__class__.__name__}")
+        print(f"   • Proveedor activo  : {os.getenv('LLM_PROVIDER')}")
+        print(f"   • Modelo configurado: {os.getenv('LLM_MODEL')}")
+    except Exception as e:
+        print(f"❌ Error de configuración: {e}")

@@ -4,7 +4,7 @@ langchain.debug = True
 
 from langgraph.graph import StateGraph, START, END
 from state import AgentState
-from nodes import analize_petition_node
+from nodes import analize_petition_node, generate_code_node
 
 
 # 1. Deterministic routing function
@@ -30,9 +30,22 @@ def build_graph():
 
     # 2. Add our worker node
     builder.add_node("analizer", analize_petition_node)
+    builder.add_node("generate_code", generate_code_node)
 
     # 3. Define edges
     builder.add_edge(START, "analizer")
+
+    # Condition edge
+    builder.add_conditional_edges(
+        "analizer", # origin
+        route_after_analysis,
+        {
+            "generate_code", "generate_code",
+            "end": END
+        }
+    )
+
+
     builder.add_edge("analizer", END)
 
     # 4. Compile to convert it into an executable app

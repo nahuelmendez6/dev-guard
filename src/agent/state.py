@@ -13,8 +13,15 @@ class PetitionAnalisys(BaseModel):
         description="Resumen de la intención principal del usuario en máximo 5 palabras."
     )
 
+# 2. Second step schema (code generation)
+class GeneratedCode(BaseModel):
+    code: str = Field(description="Raw source code")
+    explanation: str = Field(description="Brief explanation of the approach")
 
-# 2. TypedDict for the agent state
+
+# 3. Graph global state (memory)
 class AgentState(TypedDict):
     user_request: str
     petition_analysis: PetitionAnalisys | None
+    code: GeneratedCode | None
+    attempts: int

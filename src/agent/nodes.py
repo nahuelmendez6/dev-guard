@@ -19,4 +19,4 @@ def analize_petition_node(state: AgentState) -> dict:
     response = structure_llm.invoke(messages)
 
     # 3. Return only the part of the state that we want to update
-    return {"petition_analysis": response}
+    return {"petition_analysis": response, "attempts": state.get("attempts", 0) + 1}

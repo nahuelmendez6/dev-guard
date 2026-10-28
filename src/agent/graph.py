@@ -6,6 +6,24 @@ from langgraph.graph import StateGraph, START, END
 from state import AgentState
 from nodes import analize_petition_node
 
+
+# 1. Deterministic routing function
+def route_after_analysis(state: AgentState) -> str:
+    """
+    Decides if generate code or finish
+    """
+    analysis = state.get("petition_analysis")
+
+    if analysis and analysis.is_code_task:
+        print("[Router]: Routing to code generation...")
+        return "generate_code"
+
+    print("[Router] Finishing execution.")
+    return "end"
+
+
+
+
 def build_graph():
     # 1. Instantiate the graph engine with our schema
     builder = StateGraph(AgentState)

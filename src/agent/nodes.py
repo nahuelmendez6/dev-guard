@@ -12,11 +12,11 @@ def analize_petition_node(state: AgentState) -> dict:
 
     # 2. Read request from state
     messages = [
-        SystemMessage(content="You are an analyzer of technical requests. Extract the information.")
+        SystemMessage(content="You are an analyzer of technical requests. Extract the information."),
         HumanMessage(content=state["user_request"])
     ]
 
     response = structure_llm.invoke(messages)
 
     # 3. Return only the part of the state that we want to update
-    return {"petition_analisys": response}
+    return {"petition_analysis": response}

@@ -3,9 +3,15 @@ from pydantic import BaseModel, Field
 
 # 1. Data schema for the agent state
 class PetitionAnalisys(BaseModel):
-    is_code_task: bool = Field(description="True if the user is requesting to write, review, or analyze code")
-    language_detected: str = Field(description="Detected programming language in the user's request, if applicable")
-    main_intent: str = Field(description="Summary of the user's main intent in maximum 5 words")
+    is_code_task: bool = Field(
+        description="Obligatorio. True si el usuario pide escribir, revisar o analizar código. IMPORTANTE: Debe ser un valor booleano nativo (true o false), NUNCA un string."
+    )
+    language_detected: str = Field(
+        description="Lenguaje de programación detectado. IMPORTANTE: Usa exactamente la clave 'language_detected' sin espacios. Si no hay lenguaje, devuelve 'None'."
+    )
+    main_intent: str = Field(
+        description="Resumen de la intención principal del usuario en máximo 5 palabras."
+    )
 
 
 # 2. TypedDict for the agent state

@@ -11,7 +11,7 @@ def get_llm(temperature: float | None = None) -> BaseChatModel:
     con LangChain/LangGraph según las variables configuradas en .env
     """
     provider = os.getenv("LLM_PROVIDER", "google").lower().strip()
-    model_name = os.getenv("LLM_MODEL_NAME", "gemini-3.8-flash").strip()
+    model_name = os.getenv("LLM_MODEL", "gemini-3.8-flash").strip()
 
     # Si no se pasa temperatura por parámetro, se lee desde .env
     if temperature is None:
@@ -26,7 +26,9 @@ def get_llm(temperature: float | None = None) -> BaseChatModel:
         return ChatGoogleGenerativeAI(
             model=model_name,
             temperature=temperature,
-            api_key=api_key
+            api_key=api_key,
+            max_retries=1,
+            timeout=15
         )
 
     elif provider == "openai":

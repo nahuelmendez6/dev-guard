@@ -37,6 +37,16 @@ def generate_code_node(state: AgentState) -> dict:
             Requested language: {state['petition_analysis'].language_detected}
             Strictly return the code without markdown formatting (without ```python, etc.)."""
 
+    # SELF-CORRECTION logic
+    previous_errors = state.get("validation_errors", [])
+    if len(previus_errors) > 0:
+        prompt += "\n\n ATTENTION: Your previous attempt failed with the following syntax errors: \n"
+        for error in previous_errors:
+            prompt += f"- {error}\n"
+        prompt += "\n Fix the code based strictly on these errors."
+
+
+
     response = structured_llm.invoke([HumanMessage(content=prompt)])
 
     return {"code": response}

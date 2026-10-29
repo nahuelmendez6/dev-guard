@@ -1,6 +1,7 @@
 from langchain_core.messages import SystemMessage, HumanMessage
 from state import AgentState, PetitionAnalisys, GeneratedCode
 from llm import get_llm
+from tools import validate_syntax
 
 def analize_petition_node(state: AgentState) -> dict:
     """
@@ -39,3 +40,29 @@ def generate_code_node(state: AgentState) -> dict:
     response = structured_llm.invoke([HumanMessage(content=prompt)])
 
     return {"code": response}
+
+
+def validate_code_node(state: AgentState) -> dict:
+    """
+    Deterministc Node - Code validator
+    """
+
+    print("[Node: Validator] Inspecting code syntax")
+
+    # Get generate code from previous step
+    code = state["code"].code
+    language = state["petition_analysis"].language_detected
+
+    # the tool just validate python code (for now)
+    if language.lower() == "python":
+        errors = validate_syntax(code)
+
+    else:
+        errors = []
+
+    if len(errors) > 0:
+        print(f"Found len{errors} errors.")
+    else:
+        print("Syntactically correct code")
+
+    return {"validation_errors": errors}

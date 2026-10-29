@@ -1,5 +1,5 @@
 from langchain_core.messages import SystemMessage, HumanMessage
-from state import AgentState, PetitionAnalisys, GenereatedCode
+from state import AgentState, PetitionAnalisys, GeneratedCode
 from llm import get_llm
 
 def analize_petition_node(state: AgentState) -> dict:
@@ -31,7 +31,7 @@ def generate_code_node(state: AgentState) -> dict:
     llm = get_llm(temperature=0.0)
     structured_llm = llm.with_structured_output(GeneratedCode)
 
-    promtp = f"""Write code to solve this task: '{state['petition_analysis'].main_intent}'.
+    prompt = f"""Write code to solve this task: '{state['petition_analysis'].main_intent}'.
             The user originally requested: '{state['user_request']}'
             Requested language: {state['petition_analysis'].language_detected}
             Strictly return the code without markdown formatting (without ```python, etc.)."""

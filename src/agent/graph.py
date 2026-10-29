@@ -40,7 +40,7 @@ def build_graph():
         "analizer", # origin
         route_after_analysis,
         {
-            "generate_code", "generate_code",
+            "generate_code": "generate_code",
             "end": END
         }
     )
@@ -55,16 +55,27 @@ if __name__ == "__main__":
     app = build_graph()
 
     # Define initial state
-    initial_state = {
-        "user_request": "Por favor, créame una función en JavaScript para sumar dos números.",
-        "petition_analysis": None
+    
+    # Case 1: Valid request
+    print("\n --- TEST 1: VALID REQUEST ---")
+    valid_state = {
+        "user_request": "Escribe una función de Python para validar que una contraseña tenga al menos 8 caracteres y un número.",
+        "petition_analysis": None,
+        "code": None,
+        "attempts": 0
     }
 
-    print("🚀 Iniciando ejecución del grafo...")
-    # app.invoke arranca el motor pasándole el estado inicial
-    resultado_final = app.invoke(initial_state)
+    result = app.invoke(valid_state)
+    print(f"\n Test 1 result: {result['code'].code if result.get('code') else 'No code'}")
 
-    print("\n✅ Grafo terminado. Estado final en memoria:")
-    print(f"Es código: {resultado_final['petition_analysis'].is_code_task}")
-    print(f"Lenguaje : {resultado_final['petition_analysis'].language_detected}")
-    print(f"Intención: {resultado_final['petition_analysis'].main_intent}")
+    # Case 2: Invalid petition 
+    print("\n --- TEST 1: NO VALID REQUEST ---")
+    no_valid_state = {
+        "user_request": "¿Cual es la capital de Francia?",
+        "petition_analysis": None,
+        "code": None,
+        "attempts": 0
+    }
+    
+    invalid_result = app.invoke(no_valid_state)
+    print(f"\n Test 2 result: {invalid_result.get('code', 'Correcto, no se genero codigo')}")

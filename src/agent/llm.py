@@ -1,6 +1,7 @@
 import os
 from dotenv import load_dotenv
 from langchain_core.language_models.chat_models import BaseChatModel
+from langchain_ollama import ChatOllama
 
 # Cargamos las variables de entorno
 load_dotenv()
@@ -28,7 +29,7 @@ def get_llm(temperature: float | None = None) -> BaseChatModel:
             temperature=temperature,
             api_key=api_key,
             max_retries=1,
-            timeout=15
+            timeout=30
         )
 
     elif provider == "openai":
@@ -53,6 +54,12 @@ def get_llm(temperature: float | None = None) -> BaseChatModel:
             model=model_name,
             temperature=temperature,
             groq_api_key=api_key
+        )
+    
+    elif provider == "ollama":
+        return ChatOllama(
+            model=model_name,
+            temperature=temperature
         )
 
     else:

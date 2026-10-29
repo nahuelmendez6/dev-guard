@@ -25,3 +25,4 @@ class AgentState(TypedDict):
     petition_analysis: PetitionAnalisys | None
     code: GeneratedCode | None
     attempts: int
+    validation_errors: list[str]

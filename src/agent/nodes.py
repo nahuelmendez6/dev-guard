@@ -45,8 +45,6 @@ def generate_code_node(state: AgentState) -> dict:
             prompt += f"- {error}\n"
         prompt += "\n Fix the code based strictly on these errors."
 
-
-
     response = structured_llm.invoke([HumanMessage(content=prompt)])
 
     return {"code": response}

@@ -5,7 +5,8 @@ langchain.debug = True
 from langgraph.graph import StateGraph, START, END
 from state import AgentState
 from nodes import analize_petition_node, generate_code_node, validate_code_node
-
+# Import MemorySaver
+from langgraph.checkpoint.memory import MemorySaver
 
 # 1. Deterministic routing function
 def route_after_analysis(state: AgentState) -> str:
@@ -81,28 +82,32 @@ def build_graph():
 
     #builder.add_edge("analizer", END)
 
+    # initialize memory
+    memory = MemorySaver()
+
     # 4. Compile to convert it into an executable app
-    return builder.compile()
+    return builder.compile(checkpointer=memory)
 
 if __name__ == "__main__":
     app = build_graph()
 
-print("\n--- PRUEBA DE CICLO DE GENERACIÓN Y VALIDACIÓN ---")
-    
-    # Le pediremos al modelo que escriba un código con un error forzado 
-    # para intentar engañarlo y ver si la herramienta lo atrapa.
-initial_state = {
-        "user_request": "Escribe una función de Python para calcular el factorial, pero omite a propósito los dos puntos ':' al final de la definición de la función.",
+    # unique id configuration
+    config = {"configurable": {"thread_id":"test-session-1"}}
+
+    initial_state = {
+        "user_request": "Escribeu una funcion de python para sumar dos numeros",
         "petition_analysis": None,
         "code": None,
         "attempts": 0,
         "validation_errors": []
-}
-    
-result = app.invoke(initial_state)
-    
-print("\n=== RESULTADO FINAL ===")
-if result.get("codigo_final"):
-    print("CÓDIGO:\n" + result["code"].code)
-print(f"\nErrores persistentes: {result.get('validation_errors')}")
-print(f"Intentos consumidos: {result.get('attempts')}")
+    }
+
+    result = app.invoke(initial_state, config)
+    print("\n Execution 1 finished. Generated Cide: \n", result.get("code").code)
+
+    # Memory test
+    print("\n --- MEMORY TEST ---")
+    new_request = {"user_request": "Ahora modifica ese mismo código para que reste en lugar de sumar."}
+
+    result_memory = app.invoke(new_request, config)
+    print("\n Execution 2 finished. Updated code: \n", result_memory.get("code").code)

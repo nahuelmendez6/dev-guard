@@ -4,7 +4,7 @@ langchain.debug = True
 
 from langgraph.graph import StateGraph, START, END
 from state import AgentState
-from nodes import analize_petition_node, generate_code_node
+from nodes import analize_petition_node, generate_code_node, validate_code_node
 
 
 # 1. Deterministic routing function
@@ -35,9 +35,10 @@ def route_after_validation(state: AgentState) -> str:
 
     if attempts < MAX_ATTEMPTS:
         print(f"[Router 2] Errors detected. Trying agaun (Attempt {attempts + 1}/{MAX_ATTEMPTS})")
+        return "generate_code"
 
 
-    print(f"[Router 2] Attempts limit reached ({attempts/MAX_ATTEMPTS})")
+    print(f"[Router 2] Attempts limit reached ({attempts}"/"{MAX_ATTEMPTS})")
     return "end"
 
 
@@ -49,7 +50,8 @@ def build_graph():
     # 2. Add our worker node
     builder.add_node("analizer", analize_petition_node)
     builder.add_node("generate_code", generate_code_node)
-
+    builder.add_node("validator", validate_code_node)
+    
     # 3. Define edges
     builder.add_edge(START, "analizer")
 
@@ -63,8 +65,21 @@ def build_graph():
         }
     )
 
+    # after code generation always go to validator
+    builder.add_edge("generate_code", "validator")
 
-    builder.add_edge("analizer", END)
+
+    # second decision after validation
+    builder.add_conditional_edges(
+        "validator",
+        route_after_validation,
+        {
+            "generate_code": "generate_code",
+            "end": END
+        }
+    )
+
+    #builder.add_edge("analizer", END)
 
     # 4. Compile to convert it into an executable app
     return builder.compile()
@@ -72,28 +87,22 @@ def build_graph():
 if __name__ == "__main__":
     app = build_graph()
 
-    # Define initial state
+print("\n--- PRUEBA DE CICLO DE GENERACIÓN Y VALIDACIÓN ---")
     
-    # Case 1: Valid request
-    print("\n --- TEST 1: VALID REQUEST ---")
-    valid_state = {
-        "user_request": "Escribe una función de Python para validar que una contraseña tenga al menos 8 caracteres y un número.",
+    # Le pediremos al modelo que escriba un código con un error forzado 
+    # para intentar engañarlo y ver si la herramienta lo atrapa.
+initial_state = {
+        "user_request": "Escribe una función de Python para calcular el factorial, pero omite a propósito los dos puntos ':' al final de la definición de la función.",
         "petition_analysis": None,
         "code": None,
-        "attempts": 0
-    }
-
-    result = app.invoke(valid_state)
-    print(f"\n Test 1 result: {result['code'].code if result.get('code') else 'No code'}")
-
-    # Case 2: Invalid petition 
-    print("\n --- TEST 1: NO VALID REQUEST ---")
-    no_valid_state = {
-        "user_request": "¿Cual es la capital de Francia?",
-        "petition_analysis": None,
-        "code": None,
-        "attempts": 0
-    }
+        "attempts": 0,
+        "validation_errors": []
+}
     
-    invalid_result = app.invoke(no_valid_state)
-    print(f"\n Test 2 result: {invalid_result.get('code', 'Correcto, no se genero codigo')}")
+result = app.invoke(initial_state)
+    
+print("\n=== RESULTADO FINAL ===")
+if result.get("codigo_final"):
+    print("CÓDIGO:\n" + result["code"].code)
+print(f"\nErrores persistentes: {result.get('validation_errors')}")
+print(f"Intentos consumidos: {result.get('attempts')}")

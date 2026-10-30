@@ -39,7 +39,7 @@ def generate_code_node(state: AgentState) -> dict:
 
     # SELF-CORRECTION logic
     previous_errors = state.get("validation_errors", [])
-    if len(previus_errors) > 0:
+    if len(previous_errors) > 0:
         prompt += "\n\n ATTENTION: Your previous attempt failed with the following syntax errors: \n"
         for error in previous_errors:
             prompt += f"- {error}\n"
@@ -69,7 +69,7 @@ def validate_code_node(state: AgentState) -> dict:
         errors = []
 
     if len(errors) > 0:
-        print(f"Found len{errors} errors.")
+        print(f"Found {len(errors)} errors.")
     else:
         print("Syntactically correct code")
 

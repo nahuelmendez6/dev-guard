@@ -2,6 +2,7 @@ from langchain_core.messages import SystemMessage, HumanMessage
 from state import AgentState, PetitionAnalisys, GeneratedCode
 from llm import get_llm
 from tools import validate_syntax
+from langgraph.types import interrupt
 
 def analize_petition_node(state: AgentState) -> dict:
     """
@@ -112,3 +113,33 @@ def validate_code_node(state: AgentState) -> dict:
         print("Syntactically correct code")
 
     return {"validation_errors": errors}
+
+
+def save_code_to_disk_node(state: AgentState) -> dict:
+    """
+    Node that stops execution to ask for user approval to save the code to disk
+    """
+    print("\n[Node: Human in the Loop] Esperando aprobación del usuario...")
+
+    # extract code from state
+    code_str = state["code"].code if state.get("code") else "<no code generated>"
+
+    # call interrupt
+    decision = interrupt(
+        "action":"approve_code",
+        "message": "The code has been generated and validated. Do you approve saving it to disk?",
+        "code": code_str
+    )
+
+    # when the graph is resumed, the user decision will be stored in the state
+    # and execution will continuae from here
+    print(f"\n[Node: Human in the Loop] User answer: {decision}")
+
+    is_approved = decision.get("approved", False)
+
+    if is_approved:
+        print("[Node: Human in the Loop] User approved saving code to disk.")
+    else:
+        print("[Node: Human in the Loop] User rejected saving code to disk.")
+
+    return {"user_approval": is_approved}

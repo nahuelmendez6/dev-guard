@@ -26,3 +26,4 @@ class AgentState(TypedDict):
     code: GeneratedCode | None
     attempts: int
     validation_errors: list[str]
+    user_approval: bool | None

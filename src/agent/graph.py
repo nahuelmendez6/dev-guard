@@ -1,6 +1,6 @@
 import langchain
 
-langchain.debug = True
+langchain.debug = False
 
 from langgraph.graph import StateGraph, START, END
 from state import AgentState
@@ -34,12 +34,12 @@ def route_after_validation(state: AgentState) -> str:
         print("[Router 2]: Without syntax errors. Succesful")
         return "end"
 
-    if attempts < MAX_ATTEMPTS:
+    elif len(errors) > 0 and attempts < MAX_ATTEMPTS:
         print(f"[Router 2] Errors detected. Trying agaun (Attempt {attempts + 1}/{MAX_ATTEMPTS})")
         return "generate_code"
 
 
-    print(f"[Router 2] Attempts limit reached ({attempts}"/"{MAX_ATTEMPTS})")
+    print(f"[Router 2] Attempts limit reached ({attempts}/{MAX_ATTEMPTS})")
     return "end"
 
 
@@ -107,7 +107,11 @@ if __name__ == "__main__":
 
     # Memory test
     print("\n --- MEMORY TEST ---")
-    new_request = {"user_request": "Ahora modifica ese mismo código para que reste en lugar de sumar."}
+    new_request = {
+        "user_request": "Ahora modifica ese mismo código para que reste en lugar de sumar.",
+        "attempts": 0,
+        "validation_errors": []
+    }
 
     result_memory = app.invoke(new_request, config)
     print("\n Execution 2 finished. Updated code: \n", result_memory.get("code").code)

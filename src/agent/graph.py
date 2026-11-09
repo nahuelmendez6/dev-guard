@@ -4,7 +4,7 @@ langchain.debug = False
 
 from langgraph.graph import StateGraph, START, END
 from state import AgentState
-from nodes import analize_petition_node, generate_code_node, validate_code_node
+from nodes import analize_petition_node, generate_code_node, validate_code_node, save_code_to_disk_node
 # Import MemorySaver
 from langgraph.checkpoint.memory import MemorySaver
 
@@ -32,7 +32,7 @@ def route_after_validation(state: AgentState) -> str:
 
     if len(errors) == 0:
         print("[Router 2]: Without syntax errors. Succesful")
-        return "end"
+        return "user_approval"
 
     elif len(errors) > 0 and attempts < MAX_ATTEMPTS:
         print(f"[Router 2] Errors detected. Trying agaun (Attempt {attempts + 1}/{MAX_ATTEMPTS})")
@@ -52,7 +52,8 @@ def build_graph():
     builder.add_node("analizer", analize_petition_node)
     builder.add_node("generate_code", generate_code_node)
     builder.add_node("validator", validate_code_node)
-    
+    builder.add_node("user_approval", save_code_to_disk_node)
+
     # 3. Define edges
     builder.add_edge(START, "analizer")
 
@@ -76,9 +77,12 @@ def build_graph():
         route_after_validation,
         {
             "generate_code": "generate_code",
+            "user_approval": "user_approval",
             "end": END
         }
     )
+
+    builder.add_edge("user_approval", END)
 
     #builder.add_edge("analizer", END)
 
@@ -89,29 +93,47 @@ def build_graph():
     return builder.compile(checkpointer=memory)
 
 if __name__ == "__main__":
+
+    from langgraph.types import Command
+
     app = build_graph()
 
-    # unique id configuration
     config = {"configurable": {"thread_id":"test-session-1"}}
 
     initial_state = {
-        "user_request": "Escribeu una funcion de python para sumar dos numeros",
+        "user_request": "Escribe una funcion de python para sumar dos numeros",
         "petition_analysis": None,
         "code": None,
         "attempts": 0,
-        "validation_errors": []
+        "validation_errors": [],
+        "user_approval": None
     }
 
-    result = app.invoke(initial_state, config)
-    print("\n Execution 1 finished. Generated Cide: \n", result.get("code").code)
+    print("\n--- INICIANDO EJECUCIÓN ---")
+    # 2. Primera ejecución. El grafo correrá hasta llegar al nodo con interrupt()
+    app.invoke(initial_state, config)
 
-    # Memory test
-    print("\n --- MEMORY TEST ---")
-    new_request = {
-        "user_request": "Ahora modifica ese mismo código para que reste en lugar de sumar.",
-        "attempts": 0,
-        "validation_errors": []
-    }
+    # 3. Comprobamos el estado del grafo
+    snapshot = app.get_state(config)
 
-    result_memory = app.invoke(new_request, config)
-    print("\n Execution 2 finished. Updated code: \n", result_memory.get("code").code)
+    # snapshot.next nos dice qué nodo(s) están pendientes de ejecutarse.
+    # Si está pausado por un interrupt, nos mostrará el nodo en el que se pausó.
+    print("\n--- ESTADO DEL GRAFO TRAS LA PRIMERA LLAMADA ---")
+    print("Nodos pendientes (pausados):", snapshot.next)
+
+    # Podemos extraer el mensaje que enviamos en el interrupt()
+    if snapshot.tasks and snapshot.tasks[0].interrupts:
+        info_interrupcion = snapshot.tasks[0].interrupts[0].value
+        print("\nMensaje desde el nodo:", info_interrupcion["message"])
+        print("Código a revisar:\n", info_interrupcion["code"])
+
+    # 4. Simulamos que el usuario lee la consola y decide aprobarlo
+    print("\n[Simulación de Humano] Escribiendo 'sí' para aprobar...")
+    decision_del_usuario = {"approved": True} 
+
+    # 5. Reanudamos la ejecución inyectando la respuesta con Command
+    print("\n--- REANUDANDO EJECUCIÓN ---")
+    resultado_final = app.invoke(Command(resume=decision_del_usuario), config)
+    
+    print("\n--- EJECUCIÓN FINALIZADA ---")
+    print("Estado final del user_approval:", resultado_final.get("user_approval"))

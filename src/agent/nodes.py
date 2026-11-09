@@ -126,9 +126,9 @@ def save_code_to_disk_node(state: AgentState) -> dict:
 
     # call interrupt
     decision = interrupt(
-        "action":"approve_code",
+{        "action":"approve_code",
         "message": "The code has been generated and validated. Do you approve saving it to disk?",
-        "code": code_str
+        "code": code_str}
     )
 
     # when the graph is resumed, the user decision will be stored in the state

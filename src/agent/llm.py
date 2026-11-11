@@ -18,6 +18,11 @@ def get_llm(temperature: float | None = None) -> BaseChatModel:
     if temperature is None:
         temperature = float(os.getenv("LLM_TEMPERATURE", "0.0"))
 
+    # Limites de error y tolerancia a fallos de red
+    timeout = int(os.getenv("LLM_TIMEOUT", "30"))
+    max_retries = int(os.getenv("LLM_MAX_RETRIES", "2"))
+
+
     if provider == "google":
         api_key = os.getenv("GOOGLE_API_KEY")
         if not api_key or api_key.startswith("YOUR_"):
@@ -28,8 +33,8 @@ def get_llm(temperature: float | None = None) -> BaseChatModel:
             model=model_name,
             temperature=temperature,
             api_key=api_key,
-            max_retries=1,
-            timeout=30
+            max_retries=max_retries,
+            timeout=timeout
         )
 
     elif provider == "openai":
@@ -41,7 +46,9 @@ def get_llm(temperature: float | None = None) -> BaseChatModel:
         return ChatOpenAI(
             model_name=model_name,
             temperature=temperature,
-            openai_api_key=api_key
+            openai_api_key=api_key,
+            max_retries=max_retries,
+            timeout=timeout
         )
 
     elif provider == "groq":
@@ -53,13 +60,17 @@ def get_llm(temperature: float | None = None) -> BaseChatModel:
         return ChatGroq(
             model=model_name,
             temperature=temperature,
-            groq_api_key=api_key
+            groq_api_key=api_key,
+            max_retries=max_retries,
+            timeout=timeout
         )
     
     elif provider == "ollama":
         return ChatOllama(
             model=model_name,
-            temperature=temperature
+            temperature=temperature,
+            max_retries=max_retries,
+            timeout=timeout
         )
 
     else:

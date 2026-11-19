@@ -31,10 +31,11 @@ def print_history(
     print("=" * 65)
 
     # Recupera todos los snapshots del hilo ordenados del más reciente (idx=0) al mas antiguo
+    # get_state_history es un generador que entrega los snapshots
     history = list(app.get_state_history(config))
     if not history:
         print(" (No hay historial disponible para esta sesion)")
-        print("=" * 65 + \n)
+        print("=" * 65 + "\n")
         return []
 
     checkpoints_summary = []
@@ -132,7 +133,7 @@ def fork_state(
     new_config = app.update_state(
         target_config,
         values=values,
-        as_node=as_node
+        as_node=as_node # as_node le "hace creer" a LangGraph que el cambio en el estado lo genero uno de los nodos
     )
     return new_config
 

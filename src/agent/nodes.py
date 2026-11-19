@@ -44,11 +44,11 @@ def analize_petition_node(state: AgentState) -> dict:
 
     # 3. Return only the part of the state that we want to update
     # Reinicio de límites por turno
-    # Asegura que cada nueva consulta empieec con presupuesto fresco de reintentos
+    # Asegura que cada nueva consulta empiece con presupuesto fresco de reintentos
     return {
         "petition_analysis": response,
         "attempts": 0,
-        "valdation_errors": [],
+        "validation_errors": [],
         "user_approval": None    
     }
 

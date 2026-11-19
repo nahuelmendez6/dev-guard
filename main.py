@@ -11,23 +11,44 @@ from time_travel import print_history, get_checkpoint_by_index, fork_state, repl
 from langgraph.types import Command
 from langgraph.errors import GraphRecursionError
 
+# Importamos utilidades visuales de Rich
+from rich.console import Console
+from rich.panel import Panel
+from rich.syntax import Syntax
+from rich.table import Table
+
+console = Console()
+
+
+def show_banner(thread_id: str):
+    """Muestra el banner de bienvenida con diseño y comandos disponibles."""
+    menu_text = (
+        "[bold cyan]🤖 Dev-Guard CLI[/bold cyan] - [dim]Agente Autónomo con Human-in-the-Loop y Time Travel[/dim]\n\n"
+        "[bold yellow]Comandos disponibles:[/bold yellow]\n"
+        "  [cyan]•[/cyan] [bold white]salir[/bold white] o [bold white]exit[/bold white]   [dim]-> Terminar el programa[/dim]\n"
+        "  [cyan]•[/cyan] [bold white]reset[/bold white]            [dim]-> Reiniciar memoria y comenzar nueva sesión[/dim]\n"
+        "  [cyan]•[/cyan] [bold white]historial[/bold white]        [dim]-> Inspeccionar checkpoints en el tiempo (git log)[/dim]\n"
+        "  [cyan]•[/cyan] [bold white]replay <idx>[/bold white]    [dim]-> Reanudar desde un checkpoint (ej: replay 1)[/dim]"
+    )
+    console.print(
+        Panel(
+            menu_text,
+            title="[bold magenta]🛡️  DEV-GUARD[/bold magenta]",
+            subtitle=f"[dim]Sesión activa: [yellow]{thread_id}[/yellow][/dim]",
+            border_style="bright_blue",
+            padding=(1, 2)
+        )
+    )
+
 
 def main():
-    # Mensaje de bienvenida con los comandos disponibles (incluyendo Time Travel)
-    print("=" * 60)
-    print("🤖 Dev-Guard (CLI Interactivo con Time Travel)")
-    print("Comandos disponibles:")
-    print("  • 'salir' o 'exit'   -> Terminar programa")
-    print("  • 'reset'            -> Reiniciar memoria de la sesión")
-    print("  • 'historial'        -> Ver checkpoints (git log del agente)")
-    print("  • 'replay <indice>'  -> Volver a un punto anterior (ej: replay 1)")
-    print("=" * 60 + "\n")
-
-    # 2. Inicializamos el grafo y la memoria
+    # Inicializamos el grafo y la sesión
     app = build_graph()
-    thread_id = f"session-cli-{uuid.uuid4().hex[:6]}"  # Identificador único de sesión
+    thread_id = f"session-cli-{uuid.uuid4().hex[:6]}"
 
-    # 3. Configuración de la sesión (thread_id y límite de pasos para evitar bucles)
+    show_banner(thread_id)
+
+    # Configuración de sesión con límite de recursión
     config = {
         "configurable": {"thread_id": thread_id},
         "recursion_limit": 20
@@ -35,27 +56,27 @@ def main():
 
     while True:
         try:
-            # 4. Capturamos la entrada del usuario
-            user_input = input("\nUsuario > ").strip()
+            # Captura de entrada con estilo
+            console.print()
+            user_input = console.input("[bold green]❯[/bold green] [bold white]Usuario[/bold white] > ").strip()
 
-            # Validación de entrada vacía
             if not user_input:
                 continue
 
             # Condición de salida
             if user_input.lower() in ["salir", "exit", "quit"]:
-                print("Saliendo de Dev-Guard. ¡Hasta luego!")
+                console.print("\n[bold cyan]👋 Saliendo de Dev-Guard. ¡Hasta luego![/bold cyan]\n")
                 break
 
-            # Comando para reiniciar la sesión actual
+            # Comando para reiniciar la sesión
             if user_input.lower() in ["reset", "clear", "nuevo"]:
                 thread_id = f"session-cli-{uuid.uuid4().hex[:6]}"
                 config["configurable"]["thread_id"] = thread_id
-                print(f"🔄 Memoria de la sesión reiniciada. Nueva sesión: {thread_id}")
+                console.print(f"\n[bold green]🔄 Memoria reiniciada.[/bold green] Nueva sesión: [yellow]{thread_id}[/yellow]")
                 continue
 
             # ==========================================================
-            # COMANDO TIME TRAVEL 1: Ver Historial de Checkpoints
+            # COMANDO TIME TRAVEL 1: Ver Historial
             # ==========================================================
             if user_input.lower() in ["historial", "/historial", "history"]:
                 print_history(app, config)
@@ -67,59 +88,71 @@ def main():
             if user_input.lower().startswith("replay"):
                 partes = user_input.split()
                 if len(partes) < 2 or not partes[1].isdigit():
-                    print("⚠️ Uso correcto: replay <numero_indice> (ejemplo: replay 1)")
-                    print("💡 Usa primero 'historial' para ver los índices disponibles.")
+                    console.print("[bold yellow]⚠️  Uso correcto:[/bold yellow] [white]replay <numero_indice>[/white] [dim](ejemplo: replay 1)[/dim]")
+                    console.print("💡 Usa primero [bold cyan]historial[/bold cyan] para ver los índices disponibles.")
                     continue
 
                 target_idx = int(partes[1])
                 target_config = get_checkpoint_by_index(app, config, target_idx)
                 if not target_config:
-                    print(f"❌ No existe ningún checkpoint con el índice [{target_idx}].")
+                    console.print(f"[bold red]❌ No existe ningún checkpoint con el índice [{target_idx}].[/bold red]")
                     continue
 
-                print(f"🕰 [Time Travel]: Viajando al checkpoint [{target_idx}]...")
-                replay_from(app, target_config)
+                with console.status(f"[bold magenta]🕰 [Time Travel] Reanudando desde checkpoint [{target_idx}]...[/bold magenta]", spinner="aesthetic"):
+                    replay_from(app, target_config)
             else:
-                # Flujo normal: validación de tamaño e invocación inicial del grafo
+                # Flujo normal: invocación del grafo
                 if len(user_input) > 4000:
-                    print("❌ La entrada excede el límite de 4000 caracteres.")
+                    console.print("[bold red]❌ La entrada excede el límite de 4000 caracteres.[/bold red]")
                     continue
 
-                print(f"[Procesando]: {user_input}")
-                app.invoke({"user_request": user_input}, config)
+                with console.status("[bold cyan]🤖 Procesando con el agente...[/bold cyan]", spinner="dots"):
+                    app.invoke({"user_request": user_input}, config)
 
             # ==========================================================
-            # 5. GESTIÓN DEL ESTADO E INTERRUPCIONES (HITL + FORKING)
+            # GESTIÓN DEL ESTADO E INTERRUPCIONES (HITL + FORKING)
             # ==========================================================
             while True:
-                # Comprobamos el estado actual del grafo (HEAD)
                 snapshot = app.get_state(config)
 
-                # CASO A: El grafo se pausó esperando interacción humana (HITL)
+                # CASO A: Pausado esperando aprobación humana (HITL)
                 if snapshot.tasks and snapshot.tasks[0].interrupts:
                     info_interrupcion = snapshot.tasks[0].interrupts[0].value
-
-                    print("\n" + "=" * 45)
-                    print("📝 CÓDIGO GENERADO:")
-                    print("=" * 45)
                     codigo_actual = info_interrupcion.get("code", "")
-                    print(codigo_actual)
-                    print("=" * 45)
-                    print(f"Mensaje: {info_interrupcion.get('message')}")
+                    mensaje_nodo = info_interrupcion.get("message", "Aprobación requerida")
 
-                    # Mostramos las 3 opciones disponibles para el usuario
-                    print("\nOpciones:")
-                    print("  • 'sí'     -> Aprobar y guardar en disco")
-                    print("  • 'no'     -> Rechazar código")
-                    print("  • 'editar' -> Modificar código manualmente (Time Travel Fork)")
+                    # Mostramos el código con resaltado sintáctico real de Python
+                    syntax = Syntax(codigo_actual, "python", theme="monokai", line_numbers=True, word_wrap=True)
+                    console.print()
+                    console.print(Panel(
+                        syntax,
+                        title="[bold green]📝 CÓDIGO GENERADO[/bold green]",
+                        subtitle=f"[dim]{mensaje_nodo}[/dim]",
+                        border_style="bright_green",
+                        padding=(1, 2)
+                    ))
 
-                    decision = input("\n¿Qué deseas hacer?: ").strip().lower()
+                    # Menú estilizado de decisiones
+                    opciones_panel = (
+                        "[bold green][S][/bold green]í       -> [white]Aprobar y guardar código en archivo[/white]\n"
+                        "[bold red][N][/bold red]o       -> [white]Rechazar código[/white]\n"
+                        "[bold yellow][E][/bold yellow]ditar   -> [white]Modificar código manualmente ([bold cyan]Time Travel Fork[/bold cyan])[/white]"
+                    )
+                    console.print(Panel(opciones_panel, title="[bold magenta]⚡ Opciones Human-in-the-Loop[/bold magenta]", border_style="magenta"))
+
+                    decision = console.input("\n[bold yellow]¿Qué deseas hacer?[/bold yellow] [dim](sí/no/editar)[/dim]: ").strip().lower()
 
                     # ------------------------------------------------------
-                    # OPCIÓN TIME TRAVEL: Forking y modificación manual
+                    # OPCIÓN TIME TRAVEL: Forking y edición manual
                     # ------------------------------------------------------
-                    if decision in ["editar", "edit", "fork"]:
-                        print("\n✏️ Escribe o pega tu código (escribe 'FIN' en una línea vacía al terminar):")
+                    if decision in ["editar", "edit", "fork", "e"]:
+                        console.print(Panel(
+                            "Escribe o pega tu código a continuación.\n"
+                            "Cuando termines, escribe [bold yellow]FIN[/bold yellow] en una línea vacía y presiona [bold]Enter[/bold].",
+                            title="[bold yellow]✏️ Modo Edición Manual (Time Travel Fork)[/bold yellow]",
+                            border_style="yellow"
+                        ))
+
                         lineas = []
                         while True:
                             linea = input()
@@ -128,21 +161,18 @@ def main():
                             lineas.append(linea)
                         codigo_editado = "\n".join(lineas)
 
-                        # Paso 1: Obtenemos el checkpoint previo a la pausa (índice 1)
+                        # Checkpoint previo a la pausa (índice 1)
                         target_config = get_checkpoint_by_index(app, config, index=1)
                         if not target_config:
-                            print("❌ No se pudo recuperar el checkpoint para editar.")
+                            console.print("[bold red]❌ No se pudo recuperar el checkpoint para editar.[/bold red]")
                             break
 
-                        # Paso 2: Creamos el objeto GeneratedCode con el código manual
                         nuevo_codigo_obj = GeneratedCode(
                             code=codigo_editado,
                             explanation="Código editado manualmente por el usuario vía Time Travel"
                         )
 
-                        # Paso 3: Forking con as_node='generate_code'
-                        # Le decimos a LangGraph que el nodo generate_code produjo este nuevo código,
-                        # obligando al router a saltar al validador sin consultar a la API del LLM.
+                        # Forking con as_node='generate_code'
                         forked_config = fork_state(
                             app,
                             target_config=target_config,
@@ -150,10 +180,9 @@ def main():
                             as_node="generate_code"
                         )
 
-                        # Paso 4: Replay desde el fork para validar la sintaxis
-                        print("🔄 [Time Travel]: Inyectando código en memoria y reanudando validador...")
-                        replay_from(app, forked_config)
-                        # El bucle interno continúa para evaluar el nuevo estado tras la validación
+                        # Reanudar validación con spinner
+                        with console.status("[bold cyan]🔄 Validando código editado con el validador sintáctico...[/bold cyan]", spinner="dots"):
+                            replay_from(app, forked_config)
                         continue
 
                     # ------------------------------------------------------
@@ -163,65 +192,63 @@ def main():
                     nombre_archivo = "generated_code.py"
 
                     if aprobado:
-                        custom_name = input("Nombre del archivo (Enter para 'generated_code.py'): ").strip()
+                        custom_name = console.input("[dim]Nombre del archivo (Enter para 'generated_code.py'): [/dim]").strip()
                         if custom_name:
                             nombre_archivo = custom_name
 
-                    # Reanudamos el nodo 'user_approval' inyectando la decisión
-                    app.invoke(
-                        Command(resume={"approved": aprobado, "filename": nombre_archivo}),
-                        config
-                    )
+                    with console.status("[bold green]💾 Guardando estado y procesando decisión...[/bold green]", spinner="dots"):
+                        app.invoke(
+                            Command(resume={"approved": aprobado, "filename": nombre_archivo}),
+                            config
+                        )
 
                     if aprobado:
-                        print(f"✅ Código aprobado y guardado en '{nombre_archivo}'.")
+                        console.print(f"\n[bold green]✅ Código aprobado y guardado exitosamente en '{nombre_archivo}'.[/bold green]")
                     else:
-                        print("❌ Código rechazado. No se guardará en disco.")
+                        console.print("\n[bold red]❌ Código rechazado. Operación cancelada por el usuario.[/bold red]")
 
-                    # Terminamos la gestión de este turno
                     break
 
-                # CASO B: El grafo terminó directamente (sin interrupciones activas)
+                # CASO B: Grafo completado sin interrupciones pendientes
                 else:
                     analysis = snapshot.values.get("petition_analysis")
                     attempts = snapshot.values.get("attempts", 0)
 
                     if analysis and not analysis.is_code_task:
-                        print("⚠️ La petición no es una tarea de programación. No se generará código.")
+                        console.print("\n[yellow]⚠️  La petición no es una tarea de programación. No se generó código.[/yellow]")
                     elif attempts >= 3:
                         errors = snapshot.values.get("validation_errors", [])
-                        print("⚠️ Se alcanzó el límite de intentos para generar código. No se generará código.")
+                        console.print("\n[bold red]⚠️  Se alcanzó el límite de intentos para generar código válido.[/bold red]")
                         for err in errors:
-                            print(f"  - {err}")
+                            console.print(f"   [red]• {err}[/red]")
                     else:
-                        print("ℹ️ Turno completado.")
+                        console.print("\n[dim]✔ Turno completado.[/dim]")
 
-                    # Salimos del bucle interno de procesamiento
                     break
 
         except GraphRecursionError:
-            print("🚨 Error: Se alcanzó el límite máximo de pasos en el grafo. Operación abortada.")
+            console.print("\n[bold red]🚨 Error: Se alcanzó el límite máximo de pasos en el grafo. Operación abortada.[/bold red]")
         except KeyboardInterrupt:
-            print("\n\n⚠️ Operación interrumpida por el usuario (Ctrl+C).")
-            confirmar = input("¿Deseas salir de Dev-Guard? (s/n): ").strip().lower()
+            console.print("\n\n[bold yellow]⚠️  Operación interrumpida por el usuario (Ctrl+C).[/bold yellow]")
+            confirmar = console.input("¿Deseas salir de Dev-Guard? (s/n): ").strip().lower()
             if confirmar in ["s", "si", "sí", "y", "yes"]:
-                print("👋 ¡Hasta luego!")
+                console.print("[bold cyan]👋 ¡Hasta luego![/bold cyan]\n")
                 break
         except EOFError:
-            print("\nSaliendo de Dev-Guard. ¡Hasta luego!")
+            console.print("\n[bold cyan]Saliendo de Dev-Guard. ¡Hasta luego![/bold cyan]\n")
             break
         except Exception as e:
             error_msg = str(e)
-            print(f"\n❌ Error durante la ejecución:")
+            console.print(f"\n[bold red]❌ Error durante la ejecución:[/bold red]")
             if "429" in error_msg or "ResourceExhausted" in error_msg:
-                print("   • Se ha superado la cuota de peticiones (Rate Limit). Espera unos segundos.")
+                console.print("   • Se ha superado la cuota de peticiones (Rate Limit). Espera unos segundos.")
             elif "timeout" in error_msg.lower():
-                print("   • La API tardó demasiado en responder (Timeout).")
+                console.print("   • La API tardó demasiado en responder (Timeout).")
             elif "api_key" in error_msg.lower() or "unauthorized" in error_msg.lower():
-                print("   • Error de autenticación. Verifica las API keys en tu archivo .env.")
+                console.print("   • Error de autenticación. Verifica las API keys en tu archivo .env.")
             else:
-                print(f"   • Detalle: {error_msg}")
-            print("💡 Puedes continuar con otra petición.")
+                console.print(f"   • Detalle: {error_msg}")
+            console.print("[dim]💡 Puedes continuar con otra petición.[/dim]")
 
 
 if __name__ == "__main__":

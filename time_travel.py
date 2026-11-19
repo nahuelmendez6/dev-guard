@@ -81,3 +81,26 @@ def print_history(
 
     print("=" * 65 + "\n")
     return checkpoints_summary
+
+
+def get_checkpoint_by_index(
+    app: CompiledStateGraph,
+    config: Dict[str, Any],
+    index: int
+) -> Optional[Dict[str, Any]]:
+    """
+    Obtiene la configuración específica (thread_id + checkpoint_id) de un checkpoint
+    según su posición en el historial.
+
+    Args:
+        app: Grafo de LangGraph compilado.
+        config: Configuración base con el 'thread_id' del hilo.
+        index: Posición temporal (0 = estado más reciente, 1 = inmediatamente anterior, etc.).
+
+    Returns:
+        Diccionario 'config' apuntando a ese checkpoint exacto, o None si el índice no existe.
+    """
+    history = list(app.get_state_history(config))
+    if 0 <= index < len(history):
+        return history[index].config
+    return None

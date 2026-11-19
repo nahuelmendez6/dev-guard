@@ -135,3 +135,25 @@ def fork_state(
         as_node=as_node
     )
     return new_config
+
+
+def replay_from(
+    app: CompiledStateGraph,
+    target_config: Dict[str, Any]
+) -> Any:
+    """
+    Reanuda la ejecución del grafo exactamente desde el checkpoint indicado.
+
+    Sirve tanto para hacer un Replay puro (reintentar desde un punto pasado sin cambios)
+    como para ejecutar una rama creada previamente con fork_state().
+
+    Args:
+        app: Grafo de LangGraph compilado.
+        target_config: Configuración del checkpoint desde el cual reanudar.
+
+    Returns:
+        Estado final resultante tras completar (o volver a pausar) la ejecución del grafo.
+    """
+    # Pasar None como input indica a LangGraph que no inicie un estado nuevo,
+    # sino que cargue el snapshot de target_config y continúe el flujo pendiente
+    return app.invoke(None, target_config)

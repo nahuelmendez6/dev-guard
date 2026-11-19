@@ -104,3 +104,34 @@ def get_checkpoint_by_index(
     if 0 <= index < len(history):
         return history[index].config
     return None
+
+def fork_state(
+    app: CompiledStateGraph,
+    target_config: Dict[str, Any],
+    values: Dict[str, Any],
+    as_node: Optional[str] = None
+) -> Dict[str, Any]:
+    """
+    Crea una bifurcación (fork) del estado a partir de un checkpoint histórico,
+    sin destruir la línea temporal original.
+
+    Args:
+        app: Grafo de LangGraph compilado.
+        target_config: Configuración del checkpoint histórico desde el cual bifurcar.
+        values: Diccionario con los campos del estado que se desean inyectar o modificar.
+        as_node: Nombre del nodo que LangGraph simulará que generó estos datos.
+                 Es clave para el enrutamiento: determina qué arista o router se
+                 evaluará a continuación (ej. si as_node='generate_code', el grafo
+                 sabrá que el siguiente paso es 'validator').
+
+    Returns:
+        Nueva configuración ('new_config') que apunta al checkpoint recién creado
+        en la rama paralela.
+    """
+    # update_state crea un nuevo checkpoint hijo con los valores modificados
+    new_config = app.update_state(
+        target_config,
+        values=values,
+        as_node=as_node
+    )
+    return new_config

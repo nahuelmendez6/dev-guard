@@ -43,7 +43,14 @@ def analize_petition_node(state: AgentState) -> dict:
     response = structure_llm.invoke(messages)
 
     # 3. Return only the part of the state that we want to update
-    return {"petition_analysis": response}
+    # Reinicio de límites por turno
+    # Asegura que cada nueva consulta empieec con presupuesto fresco de reintentos
+    return {
+        "petition_analysis": response,
+        "attempts": 0,
+        "valdation_errors": [],
+        "user_approval": None    
+    }
 
 
 
@@ -125,8 +132,8 @@ def save_code_to_disk_node(state: AgentState) -> dict:
     code_str = state["code"].code if state.get("code") else "<no code generated>"
 
     # call interrupt
-    decision = interrupt(
-{        "action":"approve_code",
+    decision = interrupt({        
+        "action":"approve_code",
         "message": "The code has been generated and validated. Do you approve saving it to disk?",
         "code": code_str}
     )
@@ -135,11 +142,19 @@ def save_code_to_disk_node(state: AgentState) -> dict:
     # and execution will continuae from here
     print(f"\n[Node: Human in the Loop] User answer: {decision}")
 
-    is_approved = decision.get("approved", False)
+    is_approved = decision.get("approved", False) if isinstance(decision, dict) else bool(decision)
+    target_file = decision.get("filename", "generated_code.py") if isinstance(decision, dict) else "generated_code.py"
 
-    if is_approved:
-        print("[Node: Human in the Loop] User approved saving code to disk.")
+
+    if is_approved and code_str:
+        try:
+            with open(target_file, "w", encoding="utf-8") as f:
+                f.write(code_str)
+            print(f"💾 [HITL]: Código guardado con éxito en '{target_file}'.")
+        except Exception as e:
+            print(f"❌ [HITL]: Error al guardar el código en '{target_file}': {e}")
+
     else:
-        print("[Node: Human in the Loop] User rejected saving code to disk.")
+        print("🛑 [HITL]: Operación cancelada por el usuario.")
 
     return {"user_approval": is_approved}
